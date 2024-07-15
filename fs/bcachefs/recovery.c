@@ -35,6 +35,9 @@
 
 void bch2_btree_lost_data(struct bch_fs *c, enum btree_id btree)
 {
+	if (btree >= BTREE_ID_NR_MAX)
+		return;
+
 	u64 b = BIT_ULL(btree);
 
 	if (!(c->sb.btrees_lost_data & b)) {
@@ -323,6 +326,12 @@ static int journal_replay_entry_early(struct bch_fs *c,
 	case BCH_JSET_ENTRY_btree_root: {
 		struct btree_root *r;
 
+		if (fsck_err_on(entry->btree_id >= BTREE_ID_NR_MAX,
+				c, invalid_btree_id,
+				"invalid btree id %u (max %u)",
+				entry->btree_id, BTREE_ID_NR_MAX))
+			return 0;
+
 		while (entry->btree_id >= c->btree_roots_extra.nr + BTREE_ID_NR) {
 			ret = darray_push(&c->btree_roots_extra, (struct btree_root) { NULL });
 			if (ret)
@@ -412,7 +421,7 @@ static int journal_replay_entry_early(struct bch_fs *c,
 		atomic64_set(&c->io_clock[clock->rw].now, le64_to_cpu(clock->time));
 	}
 	}
-
+fsck_err:
 	return ret;
 }
 
@@ -655,10 +664,10 @@ int bch2_fs_recovery(struct bch_fs *c)
 	if (check_version_upgrade(c))
 		write_sb = true;
 
+	c->recovery_passes_explicit |= bch2_recovery_passes_from_stable(le64_to_cpu(ext->recovery_passes_required[0]));
+
 	if (write_sb)
 		bch2_write_super(c);
-
-	c->recovery_passes_explicit |= bch2_recovery_passes_from_stable(le64_to_cpu(ext->recovery_passes_required[0]));
 	mutex_unlock(&c->sb_lock);
 
 	if (c->opts.fsck && IS_ENABLED(CONFIG_BCACHEFS_DEBUG))
@@ -808,9 +817,11 @@ use_clean:
 	clear_bit(BCH_FS_fsck_running, &c->flags);
 
 	/* fsync if we fixed errors */
-	if (test_bit(BCH_FS_errors_fixed, &c->flags)) {
+	if (test_bit(BCH_FS_errors_fixed, &c->flags) &&
+	    bch2_write_ref_tryget(c, BCH_WRITE_REF_fsync)) {
 		bch2_journal_flush_all_pins(&c->journal);
 		bch2_journal_meta(&c->journal);
+		bch2_write_ref_put(c, BCH_WRITE_REF_fsync);
 	}
 
 	/* If we fixed errors, verify that fs is actually clean now: */

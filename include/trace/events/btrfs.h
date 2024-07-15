@@ -1140,7 +1140,7 @@ TRACE_EVENT(btrfs_space_reservation,
 	),
 
 	TP_fast_assign_btrfs(fs_info,
-		__assign_str(type, type);
+		__assign_str(type);
 		__entry->val		= val;
 		__entry->bytes		= bytes;
 		__entry->reserve	= reserve;
@@ -1169,7 +1169,7 @@ TRACE_EVENT(btrfs_trigger_flush,
 		__entry->flags	= flags;
 		__entry->bytes	= bytes;
 		__entry->flush	= flush;
-		__assign_str(reason, reason);
+		__assign_str(reason);
 	),
 
 	TP_printk_btrfs("%s: flush=%d(%s) flags=%llu(%s) bytes=%llu",
@@ -1622,7 +1622,7 @@ DECLARE_EVENT_CLASS(btrfs_workqueue,
 
 	TP_fast_assign_btrfs(btrfs_workqueue_owner(wq),
 		__entry->wq		= wq;
-		__assign_str(name, name);
+		__assign_str(name);
 	),
 
 	TP_printk_btrfs("name=%s wq=%p", __get_str(name),
@@ -2556,9 +2556,10 @@ TRACE_EVENT(btrfs_extent_map_shrinker_count,
 
 TRACE_EVENT(btrfs_extent_map_shrinker_scan_enter,
 
-	TP_PROTO(const struct btrfs_fs_info *fs_info, long nr_to_scan, long nr),
+	TP_PROTO(const struct btrfs_fs_info *fs_info, long nr_to_scan, long nr,
+		 u64 last_root_id, u64 last_ino),
 
-	TP_ARGS(fs_info, nr_to_scan, nr),
+	TP_ARGS(fs_info, nr_to_scan, nr, last_root_id, last_ino),
 
 	TP_STRUCT__entry_btrfs(
 		__field(	long,	nr_to_scan	)
@@ -2570,8 +2571,8 @@ TRACE_EVENT(btrfs_extent_map_shrinker_scan_enter,
 	TP_fast_assign_btrfs(fs_info,
 		__entry->nr_to_scan	= nr_to_scan;
 		__entry->nr		= nr;
-		__entry->last_root_id	= fs_info->extent_map_shrinker_last_root;
-		__entry->last_ino	= fs_info->extent_map_shrinker_last_ino;
+		__entry->last_root_id	= last_root_id;
+		__entry->last_ino	= last_ino;
 	),
 
 	TP_printk_btrfs("nr_to_scan=%ld nr=%ld last_root=%llu(%s) last_ino=%llu",
@@ -2581,9 +2582,10 @@ TRACE_EVENT(btrfs_extent_map_shrinker_scan_enter,
 
 TRACE_EVENT(btrfs_extent_map_shrinker_scan_exit,
 
-	TP_PROTO(const struct btrfs_fs_info *fs_info, long nr_dropped, long nr),
+	TP_PROTO(const struct btrfs_fs_info *fs_info, long nr_dropped, long nr,
+		 u64 last_root_id, u64 last_ino),
 
-	TP_ARGS(fs_info, nr_dropped, nr),
+	TP_ARGS(fs_info, nr_dropped, nr, last_root_id, last_ino),
 
 	TP_STRUCT__entry_btrfs(
 		__field(	long,	nr_dropped	)
@@ -2595,8 +2597,8 @@ TRACE_EVENT(btrfs_extent_map_shrinker_scan_exit,
 	TP_fast_assign_btrfs(fs_info,
 		__entry->nr_dropped	= nr_dropped;
 		__entry->nr		= nr;
-		__entry->last_root_id	= fs_info->extent_map_shrinker_last_root;
-		__entry->last_ino	= fs_info->extent_map_shrinker_last_ino;
+		__entry->last_root_id	= last_root_id;
+		__entry->last_ino	= last_ino;
 	),
 
 	TP_printk_btrfs("nr_dropped=%ld nr=%ld last_root=%llu(%s) last_ino=%llu",
